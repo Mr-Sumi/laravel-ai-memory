@@ -15,11 +15,11 @@ return new class extends Migration
     {
         Schema::ensureVectorExtensionExists();
 
-        Schema::create('memories', function (Blueprint $table) {
+        Schema::create(config('memory.table', 'memories'), function (Blueprint $table) {
             $table->id();
             $table->string('user_id')->nullable()->index();
             $table->text('content');
-            $table->vector('embedding', dimensions: config('memory.dimensions'))->index();
+            $table->vector('embedding', dimensions: (int) config('memory.dimensions'))->index();
             $table->timestamps();
 
             $table->index(['user_id', 'created_at']);
@@ -31,6 +31,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('memories');
+        Schema::dropIfExists(config('memory.table', 'memories'));
     }
 };

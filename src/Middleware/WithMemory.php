@@ -6,7 +6,8 @@ namespace Eznix86\AI\Memory\Middleware;
 
 use Closure;
 use Eznix86\AI\Memory\Services\MemoryManager;
-use Laravel\Ai\Prompts\AgentPrompt;
+use Laravel\Ai\Messages\MessageRole;
+use Laravel\Ai\PendingStep;
 
 class WithMemory
 {
@@ -21,30 +22,57 @@ class WithMemory
     ) {}
 
     /**
-     * Handle an incoming agent prompt.
+     * Handle the pending generation step.
+     *
+     * Memories are added to the latest user message for this step only, on the
+     * first step of a run, so they are neither saved into the conversation
+     * history nor repeated on every tool-call step.
      */
-    public function handle(AgentPrompt $prompt, Closure $next): mixed
+    public function handle(PendingStep $step, Closure $next): mixed
     {
-        if ($this->context === []) {
-            return $next($prompt);
+        if ($this->context === [] || ! $step->isFirstStep()) {
+            return $next($step);
         }
 
-        $limit = $this->limit ?? config('memory.middleware_recall_limit', 5);
+        $index = $this->lastUserMessageIndex($step->messages);
 
-        $memoryManager = app(MemoryManager::class);
+        if ($index === null) {
+            return $next($step);
+        }
 
-        $memories = $memoryManager->recall(
-            $prompt->prompt,
+        $query = (string) $step->messages[$index]->content;
+
+        $memories = app(MemoryManager::class)->recall(
+            $query,
             $this->context,
-            $limit,
+            $this->limit ?? config('memory.middleware_recall_limit', 5),
         );
 
-        if ($memories->isNotEmpty()) {
-            $memoryContext = $memories->map(fn ($memory): string => "- {$memory->content}")->implode("\n");
-
-            $prompt = $prompt->prepend("Relevant memories from previous conversations:\n{$memoryContext}");
+        if ($memories->isEmpty()) {
+            return $next($step);
         }
 
-        return $next($prompt);
+        $memoryContext = $memories->map(fn ($memory): string => "- {$memory->content}")->implode("\n");
+
+        $messages = $step->messages;
+        $message = clone $messages[$index];
+        $message->content = "Relevant memories from previous conversations:\n{$memoryContext}\n\n{$query}";
+        $messages[$index] = $message;
+
+        return $next($step->withMessages($messages));
+    }
+
+    /**
+     * @param  array<int, \Laravel\Ai\Messages\Message>  $messages
+     */
+    protected function lastUserMessageIndex(array $messages): ?int
+    {
+        foreach (array_reverse(array_keys($messages)) as $index) {
+            if ($messages[$index]->role === MessageRole::User && filled($messages[$index]->content)) {
+                return $index;
+            }
+        }
+
+        return null;
     }
 }

@@ -41,7 +41,7 @@ class AgentMemory extends Facade
      */
     public static function fake(array $rerankingResponses = []): void
     {
-        $dimensions = config('memory.dimensions', 1536);
+        $dimensions = (int) config('memory.dimensions', 1536);
 
         $embedding = static::makeDeterministicEmbedding($dimensions);
 

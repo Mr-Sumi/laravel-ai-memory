@@ -8,7 +8,7 @@ Agentic memory for [Laravel AI SDK](https://github.com/laravel/ai). It keeps you
 
 - PHP 8.4+
 - Laravel 12+
-- laravel AI SDK
+- Laravel AI SDK 1.x (`laravel/ai ^1.0`)
 - A vector compatible database, preferably PostgreSQL with [pgvector](https://github.com/pgvector/pgvector) extension
 
 ## Use cases
@@ -123,8 +123,10 @@ class MyAgent implements Agent, HasTools, HasMiddleware
 
 When a user prompts the agent, the middleware will:
 1. Search for relevant memories using the prompt text
-2. Prepend them to the prompt as context
+2. Add them to the latest user message for that run
 3. The agent sees them before responding
+
+Memories are only added on the first step of a run and only for that request; they are not saved into the conversation history.
 
 ### Using the Agent
 
@@ -171,7 +173,7 @@ MEMORY_TABLE=memories
 
 2. **Recall** — The query is embedded, then `whereVectorSimilarTo()` finds candidates by cosine similarity. Results are reranked via `$collection->rerank('content', $query)` for higher relevance.
 
-3. **Middleware** — Before the agent sees the prompt, `WithMemory` recalls relevant memories and prepends them as context.
+3. **Middleware** — Before the agent sees the prompt, `WithMemory` recalls relevant memories and adds them to the latest user message as context.
 
 ## Testing
 

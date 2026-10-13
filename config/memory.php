@@ -17,7 +17,7 @@ return [
     |
     */
 
-    'dimensions' => env('MEMORY_DIMENSIONS', 1536),
+    'dimensions' => (int) env('MEMORY_DIMENSIONS', 1536),
 
     /*
     |--------------------------------------------------------------------------
@@ -30,7 +30,7 @@ return [
     |
     */
 
-    'similarity_threshold' => env('MEMORY_SIMILARITY_THRESHOLD', 0.5),
+    'similarity_threshold' => (float) env('MEMORY_SIMILARITY_THRESHOLD', 0.5),
 
     /*
     |--------------------------------------------------------------------------
@@ -42,7 +42,7 @@ return [
     |
     */
 
-    'recall_limit' => env('MEMORY_RECALL_LIMIT', 10),
+    'recall_limit' => (int) env('MEMORY_RECALL_LIMIT', 10),
 
     /*
     |--------------------------------------------------------------------------
@@ -55,7 +55,7 @@ return [
     |
     */
 
-    'middleware_recall_limit' => env('MEMORY_MIDDLEWARE_RECALL_LIMIT', 5),
+    'middleware_recall_limit' => (int) env('MEMORY_MIDDLEWARE_RECALL_LIMIT', 5),
 
     /*
     |--------------------------------------------------------------------------
@@ -68,7 +68,7 @@ return [
     |
     */
 
-    'recall_oversample_factor' => env('MEMORY_RECALL_OVERSAMPLE_FACTOR', 2),
+    'recall_oversample_factor' => (int) env('MEMORY_RECALL_OVERSAMPLE_FACTOR', 2),
 
     /*
     |--------------------------------------------------------------------------

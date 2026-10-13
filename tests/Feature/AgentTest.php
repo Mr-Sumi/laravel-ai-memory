@@ -7,6 +7,8 @@ use Eznix86\AI\Memory\Middleware\WithMemory;
 use Eznix86\AI\Memory\Tools\RecallMemory;
 use Eznix86\AI\Memory\Tools\StoreMemory;
 use Illuminate\JsonSchema\JsonSchemaTypeFactory;
+use Laravel\Ai\Messages\Message;
+use Laravel\Ai\PendingStep;
 use Laravel\Ai\Prompts\AgentPrompt;
 use Laravel\Ai\Tools\Request;
 use Tests\Fixtures\MemoryAgent;
@@ -286,4 +288,42 @@ test('tools respect user isolation', function (): void {
 
     expect($result)->toContain('Bob secret data')
         ->and($result)->not->toContain('Alice secret data');
+});
+
+function pendingStepFor(string $text, int $number = 0): PendingStep
+{
+    return new PendingStep(
+        number: $number,
+        isFinalStep: false,
+        provider: 'bedrock',
+        model: 'test-model',
+        instructions: 'You are helpful.',
+        messages: [new Message('assistant', 'Hello!'), new Message('user', $text)],
+        tools: [],
+        schema: null,
+        options: null,
+    );
+}
+
+test('WithMemory only changes the latest user message and only on the first step', function (): void {
+    AgentMemory::fake();
+    AgentMemory::store('User prefers dark mode', ['user_id' => 'user-123']);
+
+    $seen = null;
+    $capture = function (PendingStep $step) use (&$seen) {
+        $seen = $step;
+
+        return null;
+    };
+
+    (new WithMemory(['user_id' => 'user-123']))->handle(pendingStepFor('Help me with my settings'), $capture);
+
+    expect($seen->messages[0]->content)->toBe('Hello!')
+        ->and($seen->messages[1]->content)
+        ->toContain('User prefers dark mode')
+        ->toEndWith('Help me with my settings');
+
+    (new WithMemory(['user_id' => 'user-123']))->handle(pendingStepFor('Help me with my settings', number: 1), $capture);
+
+    expect($seen->messages[1]->content)->toBe('Help me with my settings');
 });
